@@ -45,6 +45,8 @@ implementation {
 
         dbg(ROUTING_CHANNEL, "Node %d timer fired\n", TOS_NODE_ID);
 
+        call DVExchange.sendUpdate();
+
         delay = 5000 + (call Random.rand16() % 1000);
 
         call Timer.startOneShot(delay);
@@ -128,6 +130,16 @@ implementation {
                         memset(outgoing.payload, 0, sizeof(outgoing.payload));
 
                         entryCount = 0;
+                    }
+
+                    if(entryCount > 0) {
+                        if(call Sender.send(outgoing, neightbor) != SUCCESS) {
+                            dbg(ROUTING_CHANNEL,
+                                "Node %d failed to queue DV packet for neighbor %d\n",
+                                TOS_NODE_ID, neighbor);
+
+                            return;
+                        }
                     }
                 }
             }
