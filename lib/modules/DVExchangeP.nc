@@ -54,16 +54,29 @@ implementation {
 
         uint8_t routeCount;
 
+        uint16_t i;
+        uint16_t destination;
+        uint8_t cost;
+        uint16_t nextHop;
+
         routeCount = call DV.count();
 
         dbg(ROUTING_CHANNEL, "Node %d has %d routes to send\n", TOS_NODE_ID, routeCount);
+
+        for(i = 0; i < routeCount; i++) {
+
+            if(call DV.entryAt(i, &destination, &cost, &nextHop)) {
+
+                dbg(ROUTING_CHANNEL, "Node %d sending route to destination %d with cost %d and next hop %d\n", TOS_NODE_ID, destination, cost, nextHop);
+            }
+        }
 
     }
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
 
-        uint8_t i;
-        uint8_t destination;
+        uint16_t i;
+        uint16_t destination;
         uint8_t cost;
 
         uint16_t neighbor;
