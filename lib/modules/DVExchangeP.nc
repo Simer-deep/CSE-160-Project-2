@@ -59,15 +59,30 @@ implementation {
         uint8_t cost;
         uint16_t nextHop;
 
+        uint8_t neighborCount;
+        uint8_t neighborIndex;
+        uint16_t neighbor;
+
         routeCount = call DV.count();
+
+        neighborCount = call ND.getNeighborCount();
 
         dbg(ROUTING_CHANNEL, "Node %d has %d routes to send\n", TOS_NODE_ID, routeCount);
 
-        for(i = 0; i < routeCount; i++) {
+        for(neighborIndex = 0; neighborIndex < neighborCount; neighborIndex++){
 
-            if(call DV.entryAt(i, &destination, &cost, &nextHop)) {
+            if(!call ND.getNeighborAt(neighborIndex, &neighbor)){
+                continue;
+            }
 
-                dbg(ROUTING_CHANNEL, "Node %d sending route to destination %d with cost %d and next hop %d\n", TOS_NODE_ID, destination, cost, nextHop);
+            dbg(ROUTING_CHANNEL, "Node %d preparing update for neighbor %d\n", TOS_NODE_ID, neighbor);
+
+            for(i = 0; i < routeCount; i++){
+
+                if(call DV.entryAt(i, &destination, &cost, &nextHop)){
+
+                    dbg(ROUTING_CHANNEL, "To neighbor %d, sending route to destination %d with cost %d and next hop %d\n", neighbor, destination, cost, nextHop);
+                }
             }
         }
 
