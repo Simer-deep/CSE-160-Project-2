@@ -64,9 +64,9 @@ implementation {
         uint8_t neighborIndex;
         uint16_t neighbor;
 
-        uint8_t SendCost;
+        uint8_t sendCost;
 
-        pack outgoing;;
+        pack outgoing;
         uint8_t entryCount;
 
         routeCount = call DV.count();
@@ -76,6 +76,10 @@ implementation {
         dbg(ROUTING_CHANNEL, "Node %d has %d routes to send\n", TOS_NODE_ID, routeCount);
 
         for(neighborIndex = 0; neighborIndex < neighborCount; neighborIndex++){
+
+            if(!call ND.getNeighborAt(neighborIndex, &neighbor)){
+                continue;
+            }
 
             memset(&outgoing, 0, sizeof(pack));
 
@@ -87,10 +91,6 @@ implementation {
 
             entryCount = 0;
             outgoing.payload[0] = entryCount;
-
-            if(!call ND.getNeighborAt(neighborIndex, &neighbor)){
-                continue;
-            }
 
             dbg(ROUTING_CHANNEL, "Node %d preparing update for neighbor %d\n", TOS_NODE_ID, neighbor);
 
@@ -116,7 +116,7 @@ implementation {
                         dbg(ROUTING_CHANNEL, "Node %d has too many routes to send to neighbor %d\n", TOS_NODE_ID, neighbor);
                     }
 
-                    dbg(ROUTING_CHANNEL,"To neighbor %d: Dest %d Advertised Cost %d\n",neighbor, destination, advertisedCost);
+                    dbg(ROUTING_CHANNEL,"To neighbor %d: Dest %d Advertised Cost %d\n",neighbor, destination, sendCost);
                 }
             }
         }

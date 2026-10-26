@@ -7,12 +7,12 @@ configuration DVExchange {
     uses interface DistanceVector as DV;
     uses interface NeighborDiscovery as ND;
 
-    components new TimerMilliC() as Timer;
-    components RandomC;
 }
 
 implementation {
     components DVExchangeP;
+    components new TimerMilliC() as Timer;
+    components RandomC;
 
     components new AMReceiverC(AM_DV) as Receiver;
     components new AMSenderC(AM_DV) as Sender;
