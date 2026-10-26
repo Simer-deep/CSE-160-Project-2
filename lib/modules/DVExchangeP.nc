@@ -94,31 +94,44 @@ implementation {
 
             dbg(ROUTING_CHANNEL, "Node %d preparing update for neighbor %d\n", TOS_NODE_ID, neighbor);
 
-            for(i = 0; i < routeCount; i++){
+                
 
-                if(call DV.entryAt(i, &destination, &cost, &nextHop)){
+            for(i = 0; i < routeCount; i++) {
+
+                if(call DV.entryAt(i, &destination, &cost, &nextHop)) {
 
                     sendCost = cost;
 
-                    if(nextHop == neighbor){
+                    if(nextHop == neighbor) {
                         sendCost = DV_INFINITY;
                     }
 
-                    if(entryCount < DV_MAX_ENTRIES){
+                    outgoing.payload[1 + entryCount * 2] = (uint8_t)destination;
+                    outgoing.payload[2 + entryCount * 2] = sendCost;
 
-                        outgoing.payload[1 + entryCount * 2] = (uint8_t)destination;
-                        outgoing.payload[2 + entryCount * 2] = sendCost;
+                    entryCount++;
+                    outgoing.payload[0] = entryCount;
 
-                        entryCount++;
-                        outgoing.payload[0] = entryCount;
+                    dbg(ROUTING_CHANNEL,
+                        "To neighbor %d: Dest %d Advertised Cost %d\n",
+                        neighbor, destination, sendCost);
 
-                    } else {
-                        dbg(ROUTING_CHANNEL, "Node %d has too many routes to send to neighbor %d\n", TOS_NODE_ID, neighbor);
+                    if(entryCount == DV_MAX_ENTRIES) {
+
+                        if(call Sender.send(outgoing, neighbor) != SUCCESS) {
+                            dbg(ROUTING_CHANNEL,
+                                "Node %d failed to queue DV packet for neighbor %d\n",
+                                TOS_NODE_ID, neighbor);
+                            return;
+                        }
+
+                        memset(outgoing.payload, 0, sizeof(outgoing.payload));
+
+                        entryCount = 0;
                     }
-
-                    dbg(ROUTING_CHANNEL,"To neighbor %d: Dest %d Advertised Cost %d\n",neighbor, destination, sendCost);
                 }
             }
+            
         }
 
     }
