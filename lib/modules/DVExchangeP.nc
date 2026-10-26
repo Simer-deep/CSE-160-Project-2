@@ -38,6 +38,11 @@ implementation {
 
         neighbor = call AMPacket.source(msg); //(this is who sent it we need to know (neighbor not source btw))
 
+        if(!call ND.isNeighbor(neighbor)) {
+            dbg(ROUTING_CHANNEL, "Received DV packet from non-neighbor %d\n", neighbor);
+            return msg;
+        }
+
         count = incoming->payload[0];
 
         if(count > DV_MAX_ENTRIES) {
