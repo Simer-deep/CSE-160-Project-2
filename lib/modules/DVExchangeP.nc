@@ -8,6 +8,8 @@ module DVExchangeP {
     uses interface Receive;
     uses interface AMPacket;
     uses interface SimpleSend as Sender;
+
+    uses interface DistanceVector as DV;
 }
 
 implementation {

@@ -2,6 +2,7 @@
 
 configuration DVExchange {
     provides interface DVExchange;
+    uses interface DistanceVector as DV;
 }
 
 implementation {
@@ -18,4 +19,6 @@ implementation {
     DVExchangeP.Sender -> Sender.SimpleSend;
     
     DVExchangeP.AMPacket -> ActiveMessageC.AMPacket;
+
+    DVExchangeP.DV -> DV;
 }
