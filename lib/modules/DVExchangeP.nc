@@ -63,6 +63,8 @@ implementation {
         uint8_t neighborIndex;
         uint16_t neighbor;
 
+        uint8_t SendCost;
+
         routeCount = call DV.count();
 
         neighborCount = call ND.getNeighborCount();
@@ -81,7 +83,13 @@ implementation {
 
                 if(call DV.entryAt(i, &destination, &cost, &nextHop)){
 
-                    dbg(ROUTING_CHANNEL, "To neighbor %d, sending route to destination %d with cost %d and next hop %d\n", neighbor, destination, cost, nextHop);
+                    sendCost = cost;
+
+                    if(nextHop == neighbor){
+                        sendCost = DV_INFINITY;
+                    }
+
+                    dbg(ROUTING_CHANNEL,"To neighbor %d: Dest %d Advertised Cost %d\n",neighbor, destination, advertisedCost);
                 }
             }
         }
