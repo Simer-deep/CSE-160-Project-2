@@ -1,9 +1,14 @@
 #include "../../includes/am_types.h"
+#include <Timer.h>
 
 configuration DVExchange {
     provides interface DVExchange;
+
     uses interface DistanceVector as DV;
     uses interface NeighborDiscovery as ND;
+
+    components new TimerMilliC() as Timer;
+    components RandomC;
 }
 
 implementation {
@@ -23,4 +28,7 @@ implementation {
 
     DVExchangeP.DV -> DV;
     DVExchangeP.ND -> ND;
+    
+    DVExchangeP.Timer -> Timer.Timer;
+    DVExchangeP.Random -> RandomC.Random;
 }

@@ -1,5 +1,6 @@
 #include "../../includes/packet.h"
 #include "../../includes/dv.h"
+#include "Timer.h"
 
 module DVExchangeP {
     provides interface DVExchange;
@@ -11,9 +12,40 @@ module DVExchangeP {
 
     uses interface DistanceVector as DV;
     uses interface NeighborDiscovery as ND;
+    uses interface Timer<TMilli> as Timer;
+    uses interface Random as Random;
 }
 
 implementation {
+
+    bool started = FALSE;
+
+    command void DVExchange.start() {
+        
+        uint16_t delay; 
+
+        if(started) {
+            return;
+        }
+
+        started = TRUE;
+    
+        delay = 5000 + (call Random.rand16() % 1000);
+
+        call Timer.startOneShot(delay);
+
+    }
+
+    event void Timer.fired(){
+
+        uint16_t delay;
+
+        dbg(ROUTING_CHANNEL, "Node %d timer fired\n", TOS_NODE_ID);
+
+        delay = 5000 + (call Random.rand16() % 1000);
+        
+        call Timer.startOneShot(delay);
+    }
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
 
@@ -50,7 +82,7 @@ implementation {
             return msg;
         }
 
-        for(i = 0; i < count; i+=){
+        for(i = 0; i < count; i++){
 
             cost = incoming->payload[2 + i * 2];
 
@@ -67,7 +99,7 @@ implementation {
 
             dbg(ROUTING_CHANNEL, "Destination: %d, Cost: %d\n", destination, cost);
 
-            call DV.acceptUpdate(neighbor, destination, cost);
+            call DV.acceptEntry(neighbor, destination, cost);
         }
 
         dbg(ROUTING_CHANNEL, "Node %d received a DV packet from Node %d\n", TOS_NODE_ID, neighbor);
