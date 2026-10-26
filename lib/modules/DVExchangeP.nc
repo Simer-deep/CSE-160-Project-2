@@ -10,6 +10,7 @@ module DVExchangeP {
     uses interface SimpleSend as Sender;
 
     uses interface DistanceVector as DV;
+    uses interface NeighborDiscovery as ND;
 }
 
 implementation {

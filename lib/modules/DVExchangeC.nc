@@ -3,6 +3,7 @@
 configuration DVExchange {
     provides interface DVExchange;
     uses interface DistanceVector as DV;
+    uses interface NeighborDiscovery as ND;
 }
 
 implementation {
@@ -21,4 +22,5 @@ implementation {
     DVExchangeP.AMPacket -> ActiveMessageC.AMPacket;
 
     DVExchangeP.DV -> DV;
+    DVExchangeP.ND -> ND;
 }

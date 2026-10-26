@@ -25,6 +25,21 @@ implementation {
       memcpy(Package->payload, payload, length);
    }
 
+   //simple function to check if a node is a neighbor
+   command bool NeighborDiscovery.isNeighbor(uint16_t nodeId){
+      uint8_t i;
+
+      for(i = 0; i < neighborCount; i++){
+
+         if(neighbors[i] == nodeId){
+            return TRUE;
+         }
+
+      }
+
+      return FALSE;
+   }
+
    //kill off old neighbors
    void ageNeighbors(){
 
