@@ -18,6 +18,8 @@ module DVExchangeP {
 
 implementation {
 
+    //timer functions for sending updates
+
     bool started = FALSE;
 
     command void DVExchange.start() {
@@ -43,8 +45,19 @@ implementation {
         dbg(ROUTING_CHANNEL, "Node %d timer fired\n", TOS_NODE_ID);
 
         delay = 5000 + (call Random.rand16() % 1000);
-        
+
         call Timer.startOneShot(delay);
+    }
+
+    //send update function
+    command void DVExchange.sendUpdate(){
+
+        uint8_t routeCount;
+
+        routeCount = call DV.count();
+
+        dbg(ROUTING_CHANNEL, "Node %d has %d routes to send\n", TOS_NODE_ID, routeCount);
+
     }
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
