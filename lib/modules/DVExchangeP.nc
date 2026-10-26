@@ -1,6 +1,7 @@
 #include "../../includes/packet.h"
 #include "../../includes/dv.h"
 #include "Timer.h"
+#include <string.h>
 
 module DVExchangeP {
     provides interface DVExchange;
@@ -65,6 +66,9 @@ implementation {
 
         uint8_t SendCost;
 
+        pack outgoing;;
+        uint8_t entryCount;
+
         routeCount = call DV.count();
 
         neighborCount = call ND.getNeighborCount();
@@ -72,6 +76,17 @@ implementation {
         dbg(ROUTING_CHANNEL, "Node %d has %d routes to send\n", TOS_NODE_ID, routeCount);
 
         for(neighborIndex = 0; neighborIndex < neighborCount; neighborIndex++){
+
+            memset(&outgoing, 0, sizeof(pack));
+
+            outgoing.src = TOS_NODE_ID;
+            outgoing.dest = neighbor;
+            outgoing.TTL = 1;
+            outgoing.protocol = PROTOCOL_DV;
+            outgoing.seq = 0;
+
+            entryCount = 0;
+            outgoing.payload[0] = entryCount;
 
             if(!call ND.getNeighborAt(neighborIndex, &neighbor)){
                 continue;
@@ -87,6 +102,18 @@ implementation {
 
                     if(nextHop == neighbor){
                         sendCost = DV_INFINITY;
+                    }
+
+                    if(entryCount < DV_MAX_ENTRIES){
+
+                        outgoing.payload[1 + entryCount * 2] = (uint8_t)destination;
+                        outgoing.payload[2 + entryCount * 2] = sendCost;
+
+                        entryCount++;
+                        outgoing.payload[0] = entryCount;
+
+                    } else {
+                        dbg(ROUTING_CHANNEL, "Node %d has too many routes to send to neighbor %d\n", TOS_NODE_ID, neighbor);
                     }
 
                     dbg(ROUTING_CHANNEL,"To neighbor %d: Dest %d Advertised Cost %d\n",neighbor, destination, advertisedCost);
