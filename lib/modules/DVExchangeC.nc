@@ -10,8 +10,12 @@ implementation {
     components new AMReceiverC(AM_DV) as Receiver;
     components new AMSenderC(AM_DV) as Sender;
 
+    components ActiveMessageC;
+
     DVExchange = DVExchange.DVExchange;
 
     DVExchangeP.Receive -> Receiver.Receive;
     DVExchangeP.Sender -> Sender.SimpleSend;
+    
+    DVExchangeP.AMPacket -> ActiveMessageC.AMPacket;
 }
