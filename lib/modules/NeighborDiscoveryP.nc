@@ -40,6 +40,18 @@ implementation {
       return FALSE;
    }
 
+   command uint8_t NeighborDiscovery.getNeighborCount(){
+      return neighborCount;
+   }
+
+   command bool NeighborDiscovery.getNeighborAt(uint8_t index, uint16_t *nodeId){
+      if(index >= neighborCount){
+         return FALSE;
+      }
+      *nodeId = neighbors[index];
+      return TRUE;
+   }
+
    //kill off old neighbors
    void ageNeighbors(){
 
