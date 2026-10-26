@@ -1,4 +1,4 @@
-#include "am_types.h"
+#include "../../includes/am_types.h"
 
 configuration DVExchange {
     provides interface DVExchange;
