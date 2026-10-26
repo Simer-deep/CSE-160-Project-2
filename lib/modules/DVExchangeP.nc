@@ -14,6 +14,10 @@ implementation {
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
 
+        uint8_t i;
+        uint8_t destination;
+        uint8_t cost;
+
         uint16_t neighbor;
         uint8_t count;
 
@@ -36,6 +40,19 @@ implementation {
         if(count > DV_MAX_ENTRIES) {
             dbg(ROUTING_CHANNEL, "Invalid DV packet\n");
             return msg;
+        }
+
+        for(i = 0; i < count; i++) {
+
+            destination = incoming->payload[1 + i * 2];
+            cost = incoming->payload[2 + i * 2];
+
+            if(cost > DV_INFINITY) {
+                dbg(ROUTING_CHANNEL, "Invalid cost in DV packet\n");
+                return msg;
+            }
+
+            dbg(ROUTING_CHANNEL, "Destination: %d, Cost: %d\n", destination, cost);
         }
 
         dbg(ROUTING_CHANNEL, "Node %d received a DV packet from Node %d\n", TOS_NODE_ID, neighbor);
