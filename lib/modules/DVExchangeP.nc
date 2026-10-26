@@ -44,17 +44,24 @@ implementation {
             return msg;
         }
 
-        for(i = 0; i < count; i++) {
+        for(i = 0; i < count; i+=){
 
-            destination = incoming->payload[1 + i * 2];
             cost = incoming->payload[2 + i * 2];
 
             if(cost > DV_INFINITY) {
                 dbg(ROUTING_CHANNEL, "Invalid cost in DV packet\n");
                 return msg;
             }
+        }
+
+        for(i = 0; i < count; i++) {
+
+            destination = incoming->payload[1 + i * 2];
+            cost = incoming->payload[2 + i * 2];
 
             dbg(ROUTING_CHANNEL, "Destination: %d, Cost: %d\n", destination, cost);
+
+            call DV.acceptUpdate(neighbor, destination, cost);
         }
 
         dbg(ROUTING_CHANNEL, "Node %d received a DV packet from Node %d\n", TOS_NODE_ID, neighbor);
