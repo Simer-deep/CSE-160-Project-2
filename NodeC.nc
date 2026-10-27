@@ -29,4 +29,5 @@ implementation {
    Node.IPRouting -> IPRoutingC.IPRouting;
    IPRoutingC.DV -> DistanceVectorC.DistanceVector;
    IPRoutingC.ND -> NeighborDiscoveryC.NeighborDiscovery;
+   Node.DV -> DistanceVectorC.DistanceVector;
 }

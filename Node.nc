@@ -9,6 +9,8 @@ module Node {
 
    uses interface DVExchange;
    uses interface IPRouting;
+
+   uses interface DistanceVector as DV;
 }
 implementation {
    event void Boot.booted() {
@@ -37,7 +39,9 @@ implementation {
       call NeighborDiscovery.printNeighbors();
    }
 
-   event void CommandHandler.printRouteTable(){}
+   event void CommandHandler.printRouteTable(){
+      call DV.printTable();
+   }
 
    event void CommandHandler.printLinkState(){}
 
