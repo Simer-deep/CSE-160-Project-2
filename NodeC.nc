@@ -12,10 +12,15 @@ configuration NodeC {
 implementation {
    components MainC, Node, ActiveMessageC, CommandHandlerC;
    components NeighborDiscoveryC, FloodingC;
+   components DVExchangeC;
+   components DistanceVectorC;
 
    Node.Boot -> MainC.Boot;
    Node.AMControl -> ActiveMessageC.SplitControl;
    Node.CommandHandler -> CommandHandlerC.CommandHandler;
    Node.NeighborDiscovery -> NeighborDiscoveryC.NeighborDiscovery;
    Node.Flooding -> FloodingC.Flooding;
+   Node.DVExchange -> DVExchangeC.DVExchange;
+   DVExchangeC.DV -> DistanceVectorC.DistanceVector;
+   DVExchangeC.ND -> NeighborDiscoveryC.NeighborDiscovery;
 }

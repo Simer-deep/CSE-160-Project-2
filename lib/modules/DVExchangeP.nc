@@ -1,5 +1,7 @@
 #include "../../includes/packet.h"
 #include "../../includes/dv.h"
+#include "../../includes/channels.h"
+#include "../../includes/protocol.h"
 #include "Timer.h"
 #include <string.h>
 
