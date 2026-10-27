@@ -6,6 +6,11 @@ module Node {
    uses interface CommandHandler;
    uses interface NeighborDiscovery;
    uses interface Flooding;
+
+   uses interface DVExchange;
+   uses interface IPRouting;
+
+   uses interface DistanceVector as DV;
 }
 implementation {
    event void Boot.booted() {
@@ -17,6 +22,7 @@ implementation {
       if (err == SUCCESS) {
          dbg(GENERAL_CHANNEL, "Radio On\n");
          call NeighborDiscovery.start();
+         call DVExchange.start();
       } else {
          //Retry until successful
          call AMControl.start();
@@ -26,14 +32,16 @@ implementation {
    event void AMControl.stopDone(error_t err) {}
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload) {
-      call Flooding.ping(destination, payload);
+      call IPRouting.ping(destination, payload);
    }
 
    event void CommandHandler.printNeighbors() {
       call NeighborDiscovery.printNeighbors();
    }
 
-   event void CommandHandler.printRouteTable(){}
+   event void CommandHandler.printRouteTable(){
+      call DV.printTable();
+   }
 
    event void CommandHandler.printLinkState(){}
 

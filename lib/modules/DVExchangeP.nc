@@ -1,11 +1,12 @@
 #include "../../includes/packet.h"
 #include "../../includes/dv.h"
-#include "Timer.h"
+#include "../../includes/channels.h"
+#include "../../includes/protocol.h"
+#include <Timer.h>
 #include <string.h>
 
 module DVExchangeP {
     provides interface DVExchange;
-
 
     uses interface Receive;
     uses interface AMPacket;
@@ -13,33 +14,36 @@ module DVExchangeP {
 
     uses interface DistanceVector as DV;
     uses interface NeighborDiscovery as ND;
+
     uses interface Timer<TMilli> as Timer;
+    uses interface Timer<TMilli> as SendTimer;
     uses interface Random as Random;
 }
 
 implementation {
 
-    //timer functions for sending updates
-
     bool started = FALSE;
+    bool sending = FALSE;
+
+    uint8_t neighborIndex = 0;
+    uint16_t routeIndex = 0;
 
     command void DVExchange.start() {
-        
-        uint16_t delay; 
+
+        uint16_t delay;
 
         if(started) {
             return;
         }
 
         started = TRUE;
-    
+
         delay = 5000 + (call Random.rand16() % 1000);
 
         call Timer.startOneShot(delay);
-
     }
 
-    event void Timer.fired(){
+    event void Timer.fired() {
 
         uint16_t delay;
 
@@ -52,8 +56,7 @@ implementation {
         call Timer.startOneShot(delay);
     }
 
-    //send update function
-    command void DVExchange.sendUpdate(){
+    void sendNextPacket() {
 
         uint8_t routeCount;
 
@@ -63,7 +66,6 @@ implementation {
         uint16_t nextHop;
 
         uint8_t neighborCount;
-        uint8_t neighborIndex;
         uint16_t neighbor;
 
         uint8_t sendCost;
@@ -71,19 +73,28 @@ implementation {
         pack outgoing;
         uint8_t entryCount;
 
-        routeCount = call DV.count();
+        if(!sending) {
+            return;
+        }
 
+        routeCount = call DV.count();
         neighborCount = call ND.getNeighborCount();
 
-        dbg(ROUTING_CHANNEL, "Node %d has %d routes to send\n", TOS_NODE_ID, routeCount);
+        while(neighborIndex < neighborCount) {
 
-        for(neighborIndex = 0; neighborIndex < neighborCount; neighborIndex++){
-
-            if(!call ND.getNeighborAt(neighborIndex, &neighbor)){
+            if(!call ND.getNeighborAt(neighborIndex, &neighbor)) {
+                neighborIndex++;
+                routeIndex = 0;
                 continue;
             }
 
-            memset(&outgoing, 0, sizeof(pack));
+            if(routeIndex >= routeCount) {
+                neighborIndex++;
+                routeIndex = 0;
+                continue;
+            }
+
+            memset(&outgoing, 0, sizeof(outgoing));
 
             outgoing.src = TOS_NODE_ID;
             outgoing.dest = neighbor;
@@ -92,19 +103,26 @@ implementation {
             outgoing.seq = 0;
 
             entryCount = 0;
-            outgoing.payload[0] = entryCount;
+            outgoing.payload[0] = 0;
 
-            dbg(ROUTING_CHANNEL, "Node %d preparing update for neighbor %d\n", TOS_NODE_ID, neighbor);
-
-                
-
-            for(i = 0; i < routeCount; i++) {
+            for(i = routeIndex; i < routeCount && entryCount < DV_MAX_ENTRIES; i++) {
 
                 if(call DV.entryAt(i, &destination, &cost, &nextHop)) {
 
+                    if(destination > 255) {
+                        dbg(ROUTING_CHANNEL,
+                            "Node %d cannot encode destination %d\n",
+                            TOS_NODE_ID, destination);
+                        continue;
+                    }
+
                     sendCost = cost;
 
-                    if(nextHop == neighbor) {
+                    if(sendCost > DV_INFINITY) {
+                        sendCost = DV_INFINITY;
+                    }
+
+                    if(nextHop == neighbor && destination != TOS_NODE_ID) {
                         sendCost = DV_INFINITY;
                     }
 
@@ -117,35 +135,63 @@ implementation {
                     dbg(ROUTING_CHANNEL,
                         "To neighbor %d: Dest %d Advertised Cost %d\n",
                         neighbor, destination, sendCost);
-
-                    if(entryCount == DV_MAX_ENTRIES) {
-
-                        if(call Sender.send(outgoing, neighbor) != SUCCESS) {
-                            dbg(ROUTING_CHANNEL,
-                                "Node %d failed to queue DV packet for neighbor %d\n",
-                                TOS_NODE_ID, neighbor);
-                            return;
-                        }
-
-                        memset(outgoing.payload, 0, sizeof(outgoing.payload));
-
-                        entryCount = 0;
-                    }
-
-                    if(entryCount > 0) {
-                        if(call Sender.send(outgoing, neightbor) != SUCCESS) {
-                            dbg(ROUTING_CHANNEL,
-                                "Node %d failed to queue DV packet for neighbor %d\n",
-                                TOS_NODE_ID, neighbor);
-
-                            return;
-                        }
-                    }
                 }
             }
-            
+
+            if(entryCount == 0) {
+                neighborIndex++;
+                routeIndex = 0;
+                continue;
+            }
+
+            if(call Sender.send(outgoing, neighbor) != SUCCESS) {
+
+                dbg(ROUTING_CHANNEL,
+                    "Node %d failed to queue DV packet for neighbor %d, retrying\n",
+                    TOS_NODE_ID, neighbor);
+
+                call SendTimer.startOneShot(250);
+                return;
+            }
+
+            routeIndex = i;
+
+            dbg(ROUTING_CHANNEL,
+                "Node %d queued %d routes for neighbor %d\n",
+                TOS_NODE_ID, entryCount, neighbor);
+
+            call SendTimer.startOneShot(150);
+            return;
         }
 
+        sending = FALSE;
+
+        dbg(ROUTING_CHANNEL,
+            "Node %d finished sending DV updates\n",
+            TOS_NODE_ID);
+    }
+
+    command void DVExchange.sendUpdate() {
+
+        if(sending) {
+            return;
+        }
+
+        sending = TRUE;
+
+        neighborIndex = 0;
+        routeIndex = 0;
+
+        dbg(ROUTING_CHANNEL,
+            "Node %d starting DV update\n",
+            TOS_NODE_ID);
+
+        sendNextPacket();
+    }
+
+    event void SendTimer.fired() {
+
+        sendNextPacket();
     }
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
@@ -165,14 +211,16 @@ implementation {
 
         incoming = (pack*) payload;
 
-        if(incoming->protocol != PROTOCOL_DV || incoming->dest != TOS_NODE_ID){
+        if(incoming->protocol != PROTOCOL_DV || incoming->dest != TOS_NODE_ID) {
             return msg;
         }
 
-        neighbor = call AMPacket.source(msg); //(this is who sent it we need to know (neighbor not source btw))
+        neighbor = call AMPacket.source(msg);
 
         if(!call ND.isNeighbor(neighbor)) {
-            dbg(ROUTING_CHANNEL, "Received DV packet from non-neighbor %d\n", neighbor);
+            dbg(ROUTING_CHANNEL,
+                "Received DV packet from non-neighbor %d\n",
+                neighbor);
             return msg;
         }
 
@@ -183,7 +231,7 @@ implementation {
             return msg;
         }
 
-        for(i = 0; i < count; i++){
+        for(i = 0; i < count; i++) {
 
             cost = incoming->payload[2 + i * 2];
 
@@ -198,15 +246,17 @@ implementation {
             destination = incoming->payload[1 + i * 2];
             cost = incoming->payload[2 + i * 2];
 
-            dbg(ROUTING_CHANNEL, "Destination: %d, Cost: %d\n", destination, cost);
+            dbg(ROUTING_CHANNEL,
+                "Destination: %d, Cost: %d\n",
+                destination, cost);
 
             call DV.acceptEntry(neighbor, destination, cost);
         }
 
-        dbg(ROUTING_CHANNEL, "Node %d received a DV packet from Node %d\n", TOS_NODE_ID, neighbor);
+        dbg(ROUTING_CHANNEL,
+            "Node %d received a DV packet from Node %d\n",
+            TOS_NODE_ID, neighbor);
 
         return msg;
     }
-
-
 }
