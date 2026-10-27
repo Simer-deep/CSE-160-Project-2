@@ -8,6 +8,7 @@ module Node {
    uses interface Flooding;
 
    uses interface DVExchange;
+   uses interface IPRouting;
 }
 implementation {
    event void Boot.booted() {
@@ -29,7 +30,7 @@ implementation {
    event void AMControl.stopDone(error_t err) {}
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload) {
-      call Flooding.ping(destination, payload);
+      call IPRouting.ping(destination, payload);
    }
 
    event void CommandHandler.printNeighbors() {
