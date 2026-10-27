@@ -105,12 +105,23 @@ implementation{
             post processCommand();
         }
     }
-    event message_t* Receive.receive(message_t* raw_msg, void* payload, uint8_t len){
-        if (! call Pool.empty()){
+
+    event message_t* Receive.receive(message_t* raw_msg, void* payload, uint8_t len) {
+
+        if(len != sizeof(CommandMsg)) {
+            dbg(COMMAND_CHANNEL, "Invalid command packet size\n");
+            return raw_msg;
+        }
+
+        if(!call Pool.empty()) {
+
             call Queue.enqueue(raw_msg);
             post processCommand();
+
             return call Pool.get();
         }
+
         return raw_msg;
     }
+
 }

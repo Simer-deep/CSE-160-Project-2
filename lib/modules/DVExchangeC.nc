@@ -11,6 +11,7 @@ configuration DVExchangeC {
 implementation {
     components DVExchangeP;
     components new TimerMilliC() as Timer;
+    components new TimerMilliC() as SendTimer;
     components RandomC;
 
     components new AMReceiverC(AM_DV) as Receiver;
@@ -28,5 +29,6 @@ implementation {
     DVExchangeP.ND -> ND;
 
     DVExchangeP.Timer -> Timer.Timer;
+    DVExchangeP.SendTimer -> SendTimer.Timer;
     DVExchangeP.Random -> RandomC.Random;
 }
