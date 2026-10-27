@@ -9,6 +9,8 @@
 #include "../../includes/CommandMsg.h"
 #include "../../includes/command.h"
 #include "../../includes/channels.h"
+#include "../../includes/packet.h"
+#include <string.h>
 
 module CommandHandlerP{
    provides interface CommandHandler;
@@ -26,6 +28,9 @@ implementation{
             uint8_t* buff;
             message_t *raw_msg;
             void *payload;
+
+            uint8_t pingData[PACKET_MAX_PAYLOAD_SIZE];
+            uint8_t copyLen;
 
             // Pop message out of queue.
             raw_msg = call Queue.dequeue();
@@ -50,7 +55,18 @@ implementation{
             // value and the string in the remainder of the payload
             case CMD_PING:
                 dbg(COMMAND_CHANNEL, "Command Type: Ping\n");
-                signal CommandHandler.ping(buff[0], &buff[1]);
+
+                memset(pingData, 0, sizeof(pingData));
+
+                copyLen = sizeof(msg->payload) - 1;
+
+                if(copyLen > PACKET_MAX_PAYLOAD_SIZE) {
+                    copyLen = PACKET_MAX_PAYLOAD_SIZE;
+                }
+
+                memcpy(pingData, &buff[1], copyLen);
+
+                signal CommandHandler.ping(buff[0], pingData);
                 break;
 
             case CMD_NEIGHBOR_DUMP:
