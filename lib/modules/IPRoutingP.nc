@@ -1,6 +1,7 @@
 #include "../../includes/packet.h"
 #include "../../includes/protocol.h"
 #include "../../includes/channels.h"
+#include "../../includes/dv.h"
 #include <string.h>
 
 module IPRoutingP {
@@ -60,6 +61,51 @@ implementation {
         dbg(ROUTING_CHANNEL,
             "Node %d sending ping to %d through next hop %d\n",
             TOS_NODE_ID, destination, nextHop);
+    }
+
+    
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
+
+        pack* incoming;
+
+        if(len != sizeof(pack)) {
+            return msg;
+        }
+
+        incoming = (pack*)payload;
+
+        if(incoming->protocol != PROTOCOL_PING &&
+        incoming->protocol != PROTOCOL_PINGREPLY) {
+            return msg;
+        }
+
+        if(incoming->TTL == 0) {
+            return msg;
+        }
+
+        if(incoming->dest == TOS_NODE_ID) {
+
+            if(incoming->protocol == PROTOCOL_PING) {
+
+                dbg(ROUTING_CHANNEL,
+                    "Node %d received PING from Node %d\n",
+                    TOS_NODE_ID, incoming->src);
+
+            } else {
+
+                dbg(ROUTING_CHANNEL,
+                    "Node %d received PING REPLY from Node %d\n",
+                    TOS_NODE_ID, incoming->src);
+            }
+
+        } else {
+
+            dbg(ROUTING_CHANNEL,
+                "Node %d needs to forward packet from %d to %d\n",
+                TOS_NODE_ID, incoming->src, incoming->dest);
+        }
+
+        return msg;
     }
 
 
