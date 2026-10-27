@@ -3,6 +3,7 @@
 module DistanceVectorP 
 {
     provides interface DistanceVector;
+    uses interface NeighborDiscovery as ND;
 }
 
 implementation 
@@ -12,19 +13,60 @@ implementation
 
     uint8_t routeCount = 0;
 
-    command uint8_t DistanceVector.getRouteCount() 
+    bool initialized = FALSE;
+
+    void initializeRoutes() 
+    {
+        if (initialized) 
+        {
+            return;
+        }
+
+        routingTable[0].destination = TOS_NODE_ID;
+        routingTable[0].nextHop = TOS_NODE_ID;
+        routingTable[0].cost = 0;
+        routingTable[0].state = DV_ROUTE_VALID;
+
+        routeCount = 1;
+        initialized = TRUE;
+    }
+
+    if (!call ND.isNeighbor(from)) 
+    {
+        return;
+    }
+
+    command uint8_t DistanceVector.count() 
     {
         return routeCount;
     }
 
-    command bool DistanceVector.getRouteAt(uint8_t index, dv_route_t* route)
+    
+    command void DistanceVector.start() 
     {
-        if (index >= routeCount || route == NULL) 
-        {
-            return FALSE;
-        }
+        initializeRoutes();
+    }
 
-        *route = routingTable[index];
+
+    command bool DistanceVector.entryAt(
+        uint8_t index,
+        uint16_t* destination,
+        uint8_t* cost,
+        uint16_t* nextHop
+    ) 
+    {
+        if (index >= routeCount ||
+            destination == NULL ||
+            cost == NULL ||
+            nextHop == NULL) 
+            {
+                return FALSE;
+            }
+
+        *destination = routingTable[index].destination;
+        *cost = routingTable[index].cost;
+        *nextHop = routingTable[index].nextHop;
+
         return TRUE;
     }
     
@@ -138,5 +180,23 @@ implementation
             routeCount++;
             return;
         }
+
+        if (routingTable[i].nextHop == from ||
+            routingTable[i].state != DV_ROUTE_VALID ||
+            newCost < routingTable[i].cost) 
+            {
+                routingTable[i].cost = newCost;
+
+                if (newCost == DV_INFINITY) 
+                {
+                    routingTable[i].nextHop = DV_NO_NEXT_HOP;
+                    routingTable[i].state = DV_ROUTE_WITHDRAWN;
+                } 
+                else 
+                {
+                    routingTable[i].nextHop = from;
+                    routingTable[i].state = DV_ROUTE_VALID;
+                }
+            }
     }
 }

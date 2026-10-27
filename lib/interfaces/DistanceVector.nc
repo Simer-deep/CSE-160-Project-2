@@ -2,9 +2,11 @@
 
 interface DistanceVector {
 
-    command uint8_t getRouteCount();
+    command void start();
 
-    command bool getRouteAt(
+    command uint8_t count();
+
+    command bool entryAt(
         uint8_t index,
         dv_route_t* route
     );
