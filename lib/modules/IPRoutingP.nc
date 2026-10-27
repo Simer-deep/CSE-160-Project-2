@@ -99,10 +99,47 @@ implementation {
             }
 
         } else {
+            pack forwarded;
+            uint16_t nextHop;
+            uint8_t cost;
+
+            if(incoming->TTL <= 1) {
+                dbg(ROUTING_CHANNEL,
+                    "Node %d dropped packet because TTL expired\n",
+                    TOS_NODE_ID);
+                return msg;
+            }
+
+            if(!call DV.lookup(incoming->dest, &nextHop, &cost)) {
+                dbg(ROUTING_CHANNEL,
+                    "Node %d has no route to %d\n",
+                    TOS_NODE_ID, incoming->dest);
+                return msg;
+            }
+
+            if(cost >= DV_INFINITY || !call ND.isNeighbor(nextHop)) {
+                dbg(ROUTING_CHANNEL,
+                    "Node %d cannot forward to %d\n",
+                    TOS_NODE_ID, incoming->dest);
+                return msg;
+            }
+
+            memcpy(&forwarded, incoming, sizeof(pack));
+
+            forwarded.TTL = incoming->TTL - 1;
+
+            if(call Sender.send(forwarded, nextHop) != SUCCESS) {
+                dbg(ROUTING_CHANNEL,
+                    "Node %d failed to queue forwarded packet\n",
+                    TOS_NODE_ID);
+                return msg;
+            }
 
             dbg(ROUTING_CHANNEL,
-                "Node %d needs to forward packet from %d to %d\n",
-                TOS_NODE_ID, incoming->src, incoming->dest);
+                "Node %d forwarding packet from %d to %d through %d with TTL %d\n",
+                TOS_NODE_ID, forwarded.src, forwarded.dest,
+                nextHop, forwarded.TTL);
+
         }
 
         return msg;
