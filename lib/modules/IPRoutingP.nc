@@ -85,18 +85,49 @@ implementation {
 
         if(incoming->dest == TOS_NODE_ID) {
 
+            
             if(incoming->protocol == PROTOCOL_PING) {
+
+                pack reply;
+                uint16_t nextHop;
+                uint8_t cost;
 
                 dbg(ROUTING_CHANNEL,
                     "Node %d received PING from Node %d\n",
                     TOS_NODE_ID, incoming->src);
 
-            } else {
+                if(!call DV.lookup(incoming->src, &nextHop, &cost)) {
+                    dbg(ROUTING_CHANNEL, "No route back to %d\n", incoming->src);
+                    return msg;
+                }
+
+                if(cost >= DV_INFINITY || !call ND.isNeighbor(nextHop)) {
+                    dbg(ROUTING_CHANNEL, "Cannot send reply to %d\n", incoming->src);
+                    return msg;
+                }
+
+                memcpy(&reply, incoming, sizeof(pack));
+
+                reply.src = TOS_NODE_ID;
+                reply.dest = incoming->src;
+                reply.protocol = PROTOCOL_PINGREPLY;
+                reply.TTL = MAX_TTL;
+
+                if(call Sender.send(reply, nextHop) != SUCCESS) {
+                    dbg(ROUTING_CHANNEL, "Failed to queue PINGREPLY\n");
+                    return msg;
+                }
 
                 dbg(ROUTING_CHANNEL,
-                    "Node %d received PING REPLY from Node %d\n",
-                    TOS_NODE_ID, incoming->src);
-            }
+                    "Node %d replying to %d through next hop %d\n",
+                    TOS_NODE_ID, reply.dest, nextHop);
+                    
+            } else {
+
+                    dbg(ROUTING_CHANNEL,
+                        "Node %d received PING REPLY from Node %d\n",
+                        TOS_NODE_ID, incoming->src);
+                }
 
         } else {
             pack forwarded;
