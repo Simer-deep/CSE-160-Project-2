@@ -228,6 +228,11 @@ implementation
         uint8_t newCost;
         uint8_t i;
 
+        if (!call ND.isNeighbor(from)) 
+        {
+            return;
+        }
+
         if (destination == TOS_NODE_ID) 
         {
             return;
@@ -263,6 +268,8 @@ implementation
             routingTable[i].nextHop = from;
             routingTable[i].cost = newCost;
             routingTable[i].state = DV_ROUTE_VALID;
+
+            routingTable[i].lastUpdated = call MaintenanceTimer.getNow();
 
             routeCount++;
             return;

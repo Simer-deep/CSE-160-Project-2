@@ -6,6 +6,7 @@
 enum {
     DV_INFINITY = 16,
     DV_ENTRY_SIZE = 2,
+    DV_ROUTE_TIMEOUT = 20000
 
     DV_MAX_ENTRIES =
         (PACKET_MAX_PAYLOAD_SIZE - 1) / DV_ENTRY_SIZE,
@@ -25,6 +26,7 @@ typedef struct dv_route {
     uint16_t nextHop;
     uint8_t cost;
     uint8_t state;
+    uint32_t lastUpdated;
 } dv_route_t;
 
 #endif
