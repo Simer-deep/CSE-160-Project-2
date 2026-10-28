@@ -108,7 +108,7 @@ class DVTest(object):
                        "%s used the expected next hops" % label)
             self.check([event[5] for event in events] == list(range(hops, 0, -1)),
                        "%s used the expected route costs" % label)
-            self.check([event[6] for event in events] == list(range(15, 15 - hops, -1)),
+            self.check([event[6] for event in events] == list(range(32, 32 - hops, -1)),
                        "%s decreased TTL once at each relay" % label)
         self.check("Node %d received PING from Node %d, seq: %d" % (destination, source, sequence) in text,
                    "destination received the routed ping")
