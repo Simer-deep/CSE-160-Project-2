@@ -20,6 +20,6 @@ implementation {
     IPRoutingP.Receive -> Receiver.Receive;
     IPRoutingP.Sender -> Sender.SimpleSend;
 
-    IPRoutingP.DV -> DV;
-    IPRoutingP.ND -> ND;
+    DV = IPRoutingP.DV;
+    ND = IPRoutingP.ND;
 }

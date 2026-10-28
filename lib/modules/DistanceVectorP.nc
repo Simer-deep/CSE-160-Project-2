@@ -1,9 +1,11 @@
 #include "../../includes/dv.h"
+#include <Timer.h>
 
 module DistanceVectorP 
 {
     provides interface DistanceVector;
     uses interface NeighborDiscovery as ND;
+    uses interface Timer<TMilli> as MaintenanceTimer;
 }
 
 implementation 
@@ -30,11 +32,6 @@ implementation
         initialized = TRUE;
     }
 
-    if (!call ND.isNeighbor(from)) 
-    {
-        return;
-    }
-
     command uint8_t DistanceVector.count() 
     {
         return routeCount;
@@ -52,6 +49,7 @@ implementation
                 routingTable[i].nextHop = neighborId;
                 routingTable[i].cost = 1;
                 routingTable[i].state = DV_ROUTE_VALID;
+                routingTable[i].lastUpdated = call MaintenanceTimer.getNow();
                 return;
             }
         }
@@ -65,6 +63,7 @@ implementation
         routingTable[routeCount].nextHop = neighborId;
         routingTable[routeCount].cost = 1;
         routingTable[routeCount].state = DV_ROUTE_VALID;
+        routingTable[routeCount].lastUpdated = call MaintenanceTimer.getNow();
 
         routeCount++;
     }
@@ -92,6 +91,18 @@ implementation
         }
 
         call MaintenanceTimer.startPeriodic(1000);
+    }
+
+    void withdrawRoute(uint8_t i) 
+    {
+        if (routingTable[i].state != DV_ROUTE_WITHDRAWN) 
+        {
+            routingTable[i].lastUpdated = call MaintenanceTimer.getNow();
+        }
+
+        routingTable[i].cost = DV_INFINITY;
+        routingTable[i].nextHop = DV_NO_NEXT_HOP;
+        routingTable[i].state = DV_ROUTE_WITHDRAWN;
     }
 
    event void MaintenanceTimer.fired() 
@@ -128,9 +139,58 @@ implementation
                     routingTable[i].destination,
                     routingTable[i].nextHop);
 
-                routingTable[i].cost = DV_INFINITY;
-                routingTable[i].nextHop = DV_NO_NEXT_HOP;
-                routingTable[i].state = DV_ROUTE_WITHDRAWN;
+                withdrawRoute(i);
+            }
+        }
+
+        for (i = 0; i < routeCount; i++) 
+        {
+            if (routingTable[i].destination == TOS_NODE_ID ||
+                routingTable[i].state != DV_ROUTE_VALID) 
+                {
+                    continue;
+                }
+
+            if (routingTable[i].destination ==
+                    routingTable[i].nextHop &&
+                call ND.isNeighbor(routingTable[i].destination)) 
+                {
+                    continue;
+                }
+
+            if ((uint32_t)(call MaintenanceTimer.getNow() -
+                routingTable[i].lastUpdated) >= DV_ROUTE_TIMEOUT) 
+                {
+
+                    dbg(ROUTING_CHANNEL,
+                        "Node %d route to %d expired\n",
+                        TOS_NODE_ID,
+                        routingTable[i].destination);
+
+                    withdrawRoute(i);
+                }
+        }
+
+                
+        for (i = 1; i < routeCount; ) 
+        {
+            if (routingTable[i].state == DV_ROUTE_WITHDRAWN &&
+                (uint32_t)(call MaintenanceTimer.getNow() -
+                routingTable[i].lastUpdated) >= DV_WITHDRAW_TIMEOUT) 
+                {
+                    uint8_t j;
+
+                    for (j = i; j + 1 < routeCount; j++) 
+                    {
+                        routingTable[j] = routingTable[j + 1];
+                    }
+
+                    routeCount--;
+                } 
+            
+            else 
+            {
+                i++;
             }
         }
     }
@@ -228,12 +288,17 @@ implementation
         uint8_t newCost;
         uint8_t i;
 
-        if (!call ND.isNeighbor(from)) 
+        if (!call ND.isNeighbor(from))
         {
             return;
         }
 
         if (destination == TOS_NODE_ID) 
+        {
+            return;
+        }
+
+        if (call ND.isNeighbor(destination)) 
         {
             return;
         }
@@ -276,20 +341,36 @@ implementation
         }
 
         if (routingTable[i].nextHop == from ||
-            routingTable[i].state != DV_ROUTE_VALID ||
+            (routingTable[i].state != DV_ROUTE_VALID &&
+            newCost < DV_INFINITY) ||
             newCost < routingTable[i].cost) 
             {
                 routingTable[i].cost = newCost;
 
                 if (newCost == DV_INFINITY) 
                 {
-                    routingTable[i].nextHop = DV_NO_NEXT_HOP;
-                    routingTable[i].state = DV_ROUTE_WITHDRAWN;
+                    withdrawRoute(i);
                 } 
                 else 
                 {
+                    if (routingTable[i].state == DV_ROUTE_WITHDRAWN)
+                    {
+                        dbg(ROUTING_CHANNEL,
+                            "Node %d recovered route to %d via %d cost %d\n",
+                            TOS_NODE_ID,
+                            destination,
+                            from,
+                            newCost);
+                    }
+                    
                     routingTable[i].nextHop = from;
+                    routingTable[i].cost = newCost;
                     routingTable[i].state = DV_ROUTE_VALID;
+                }
+
+                if (newCost < DV_INFINITY) 
+                {
+                    routingTable[i].lastUpdated = call MaintenanceTimer.getNow();
                 }
             }
     }
