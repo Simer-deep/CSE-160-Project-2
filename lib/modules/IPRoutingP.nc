@@ -59,8 +59,9 @@ implementation {
         }
 
         dbg(ROUTING_CHANNEL,
-            "Node %d sending ping to %d through next hop %d\n",
-            TOS_NODE_ID, destination, nextHop);
+            "Node %d Routing Packet - src: %d, dest: %d, seq: %d, next hop: %d, cost: %d, TTL: %d\n",
+            TOS_NODE_ID, outgoing.src, outgoing.dest, outgoing.seq,
+            nextHop, cost, outgoing.TTL);
     }
 
     
@@ -80,6 +81,10 @@ implementation {
         }
 
         if(incoming->TTL == 0) {
+            dbg(ROUTING_CHANNEL,
+                "Node %d dropped packet because TTL expired - src: %d, dest: %d, seq: %d, TTL: %d\n",
+                TOS_NODE_ID, incoming->src, incoming->dest,
+                incoming->seq, incoming->TTL);
             return msg;
         }
 
@@ -93,8 +98,8 @@ implementation {
                 uint8_t cost;
 
                 dbg(ROUTING_CHANNEL,
-                    "Node %d received PING from Node %d\n",
-                    TOS_NODE_ID, incoming->src);
+                    "Node %d received PING from Node %d, seq: %d\n",
+                    TOS_NODE_ID, incoming->src, incoming->seq);
 
                 if(!call DV.lookup(incoming->src, &nextHop, &cost)) {
                     dbg(ROUTING_CHANNEL, "No route back to %d\n", incoming->src);
@@ -119,14 +124,15 @@ implementation {
                 }
 
                 dbg(ROUTING_CHANNEL,
-                    "Node %d replying to %d through next hop %d\n",
-                    TOS_NODE_ID, reply.dest, nextHop);
+                    "Node %d Routing Packet - src: %d, dest: %d, seq: %d, next hop: %d, cost: %d, TTL: %d\n",
+                    TOS_NODE_ID, reply.src, reply.dest, reply.seq,
+                    nextHop, cost, reply.TTL);
                     
             } else {
 
                     dbg(ROUTING_CHANNEL,
-                        "Node %d received PING REPLY from Node %d\n",
-                        TOS_NODE_ID, incoming->src);
+                        "Node %d received PING REPLY from Node %d, seq: %d\n",
+                        TOS_NODE_ID, incoming->src, incoming->seq);
                 }
 
         } else {
@@ -136,22 +142,23 @@ implementation {
 
             if(incoming->TTL <= 1) {
                 dbg(ROUTING_CHANNEL,
-                    "Node %d dropped packet because TTL expired\n",
-                    TOS_NODE_ID);
+                    "Node %d dropped packet because TTL expired - src: %d, dest: %d, seq: %d, TTL: %d\n",
+                    TOS_NODE_ID, incoming->src, incoming->dest,
+                    incoming->seq, incoming->TTL);
                 return msg;
             }
 
             if(!call DV.lookup(incoming->dest, &nextHop, &cost)) {
                 dbg(ROUTING_CHANNEL,
-                    "Node %d has no route to %d\n",
-                    TOS_NODE_ID, incoming->dest);
+                    "Node %d has no route to %d - src: %d, seq: %d\n",
+                    TOS_NODE_ID, incoming->dest, incoming->src, incoming->seq);
                 return msg;
             }
 
             if(cost >= DV_INFINITY || !call ND.isNeighbor(nextHop)) {
                 dbg(ROUTING_CHANNEL,
-                    "Node %d cannot forward to %d\n",
-                    TOS_NODE_ID, incoming->dest);
+                    "Node %d cannot forward to %d - src: %d, seq: %d\n",
+                    TOS_NODE_ID, incoming->dest, incoming->src, incoming->seq);
                 return msg;
             }
 
@@ -167,9 +174,9 @@ implementation {
             }
 
             dbg(ROUTING_CHANNEL,
-                "Node %d forwarding packet from %d to %d through %d with TTL %d\n",
-                TOS_NODE_ID, forwarded.src, forwarded.dest,
-                nextHop, forwarded.TTL);
+                "Node %d Routing Packet - src: %d, dest: %d, seq: %d, next hop: %d, cost: %d, TTL: %d\n",
+                TOS_NODE_ID, forwarded.src, forwarded.dest, forwarded.seq,
+                nextHop, cost, forwarded.TTL);
 
         }
 

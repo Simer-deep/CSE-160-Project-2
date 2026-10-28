@@ -26,6 +26,7 @@ implementation {
     bool sending = FALSE;
 
     uint8_t neighborIndex = 0;
+    uint16_t currentNeighbor = AM_BROADCAST_ADDR;
     uint16_t routeIndex = 0;
 
     command void DVExchange.start() {
@@ -88,6 +89,11 @@ implementation {
                 continue;
             }
 
+            if(neighbor != currentNeighbor) {
+                currentNeighbor = neighbor;
+                routeIndex = 0;
+            }
+
             if(routeIndex >= routeCount) {
                 neighborIndex++;
                 routeIndex = 0;
@@ -122,7 +128,9 @@ implementation {
                         sendCost = DV_INFINITY;
                     }
 
-                    if(nextHop == neighbor && destination != TOS_NODE_ID) {
+                    if(destination == TOS_NODE_ID) {
+                        sendCost = 0;
+                    } else if(nextHop == neighbor) {
                         sendCost = DV_INFINITY;
                     }
 
@@ -132,9 +140,6 @@ implementation {
                     entryCount++;
                     outgoing.payload[0] = entryCount;
 
-                    dbg(ROUTING_CHANNEL,
-                        "To neighbor %d: Dest %d Advertised Cost %d\n",
-                        neighbor, destination, sendCost);
                 }
             }
 
@@ -154,11 +159,18 @@ implementation {
                 return;
             }
 
+            dbg(ROUTING_CHANNEL,
+                "Node %d queued %d routes for neighbor %d starting at %d\n",
+                TOS_NODE_ID, entryCount, neighbor, routeIndex);
+
             routeIndex = i;
 
-            dbg(ROUTING_CHANNEL,
-                "Node %d queued %d routes for neighbor %d\n",
-                TOS_NODE_ID, entryCount, neighbor);
+            for(i = 0; i < entryCount; i++) {
+                dbg(ROUTING_CHANNEL,
+                    "Node %d to neighbor %d: Dest %d Advertised Cost %d\n",
+                    TOS_NODE_ID, neighbor,
+                    outgoing.payload[1 + i * 2], outgoing.payload[2 + i * 2]);
+            }
 
             call SendTimer.startOneShot(150);
             return;
@@ -180,6 +192,7 @@ implementation {
         sending = TRUE;
 
         neighborIndex = 0;
+        currentNeighbor = AM_BROADCAST_ADDR;
         routeIndex = 0;
 
         dbg(ROUTING_CHANNEL,
@@ -246,11 +259,11 @@ implementation {
             destination = incoming->payload[1 + i * 2];
             cost = incoming->payload[2 + i * 2];
 
-            dbg(ROUTING_CHANNEL,
-                "Destination: %d, Cost: %d\n",
-                destination, cost);
-
             call DV.acceptEntry(neighbor, destination, cost);
+
+            dbg(ROUTING_CHANNEL,
+                "Node %d received from neighbor %d: Dest %d Advertised Cost %d\n",
+                TOS_NODE_ID, neighbor, destination, cost);
         }
 
         dbg(ROUTING_CHANNEL,
