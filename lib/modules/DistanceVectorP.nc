@@ -110,17 +110,28 @@ implementation
             }
         }
 
+        
         for (i = 0; i < routeCount; i++) 
         {
+            if (routingTable[i].destination == TOS_NODE_ID) 
+            {
+                continue;
+            }
+
             if (routingTable[i].state == DV_ROUTE_VALID &&
-                routingTable[i].cost == 1 &&
-                routingTable[i].destination != TOS_NODE_ID &&
-                !call ND.isNeighbor(routingTable[i].destination)) 
+                !call ND.isNeighbor(routingTable[i].nextHop)) 
                 {
-                    routingTable[i].cost = DV_INFINITY;
-                    routingTable[i].nextHop = DV_NO_NEXT_HOP;
-                    routingTable[i].state = DV_ROUTE_WITHDRAWN;
-                }
+
+                dbg(ROUTING_CHANNEL,
+                    "Node %d lost route to %d via %d\n",
+                    TOS_NODE_ID,
+                    routingTable[i].destination,
+                    routingTable[i].nextHop);
+
+                routingTable[i].cost = DV_INFINITY;
+                routingTable[i].nextHop = DV_NO_NEXT_HOP;
+                routingTable[i].state = DV_ROUTE_WITHDRAWN;
+            }
         }
     }
 
