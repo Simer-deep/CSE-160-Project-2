@@ -1,9 +1,11 @@
 #include "../../includes/dv.h"
+#include <Timer.h>
 
 module DistanceVectorP 
 {
     provides interface DistanceVector;
     uses interface NeighborDiscovery as ND;
+    uses interface Timer<TMilli> as MaintenanceTimer;
 }
 
 implementation 
@@ -28,11 +30,6 @@ implementation
 
         routeCount = 1;
         initialized = TRUE;
-    }
-
-    if (!call ND.isNeighbor(from)) 
-    {
-        return;
     }
 
     command uint8_t DistanceVector.count() 
@@ -227,6 +224,11 @@ implementation
     ) {
         uint8_t newCost;
         uint8_t i;
+
+        if (!call ND.isNeighbor(from))
+        {
+            return;
+        }
 
         if (destination == TOS_NODE_ID) 
         {

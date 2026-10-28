@@ -8,7 +8,9 @@ interface DistanceVector {
 
     command bool entryAt(
         uint8_t index,
-        dv_route_t* route
+        uint16_t* destination,
+        uint8_t* cost,
+        uint16_t* nextHop
     );
 
     command void acceptEntry(

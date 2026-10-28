@@ -25,8 +25,8 @@ implementation {
     DVExchangeP.Sender -> Sender.SimpleSend;
     DVExchangeP.AMPacket -> ActiveMessageC.AMPacket;
 
-    DVExchangeP.DV -> DV;
-    DVExchangeP.ND -> ND;
+    DV = DVExchangeP.DV;
+    ND = DVExchangeP.ND;
 
     DVExchangeP.Timer -> Timer.Timer;
     DVExchangeP.SendTimer -> SendTimer.Timer;
