@@ -22,6 +22,7 @@ implementation {
       if (err == SUCCESS) {
          dbg(GENERAL_CHANNEL, "Radio On\n");
          call NeighborDiscovery.start();
+         call DV.start();
          call DVExchange.start();
       } else {
          //Retry until successful

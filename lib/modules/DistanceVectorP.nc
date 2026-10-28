@@ -8,7 +8,6 @@ module DistanceVectorP
 
 implementation 
 {
-
     dv_route_t routingTable[DV_MAX_ROUTES];
 
     uint8_t routeCount = 0;
@@ -41,12 +40,89 @@ implementation
         return routeCount;
     }
 
-    
-    command void DistanceVector.start() 
+        
+    void addDirectNeighbor(uint16_t neighborId) 
     {
-        initializeRoutes();
+        uint8_t i;
+
+        for (i = 0; i < routeCount; i++) 
+        {
+            if (routingTable[i].destination == neighborId) 
+            {
+                routingTable[i].nextHop = neighborId;
+                routingTable[i].cost = 1;
+                routingTable[i].state = DV_ROUTE_VALID;
+                return;
+            }
+        }
+
+        if (routeCount >= DV_MAX_ROUTES)
+        {
+            return;
+        }
+
+        routingTable[routeCount].destination = neighborId;
+        routingTable[routeCount].nextHop = neighborId;
+        routingTable[routeCount].cost = 1;
+        routingTable[routeCount].state = DV_ROUTE_VALID;
+
+        routeCount++;
     }
 
+
+    command void DistanceVector.start() 
+    {
+        uint8_t i;
+        uint8_t neighborCount;
+        uint16_t neighborId;
+
+        initializeRoutes();
+
+        neighborCount = call ND.getNeighborCount();
+
+        for (i = 0; i < neighborCount; i++) 
+        {
+            if (call ND.getNeighborAt(i, &neighborId)) 
+            {
+                addDirectNeighbor(neighborId);
+                dbg(ROUTING_CHANNEL,
+                    "Node %d found neighbor %d\n",
+                    TOS_NODE_ID, neighborId);
+            }
+        }
+
+        call MaintenanceTimer.startPeriodic(1000);
+    }
+
+   event void MaintenanceTimer.fired() 
+   {
+        uint8_t i;
+        uint8_t neighborCount;
+        uint16_t neighborId;
+
+        neighborCount = call ND.getNeighborCount();
+
+        for (i = 0; i < neighborCount; i++) 
+        {
+            if (call ND.getNeighborAt(i, &neighborId)) 
+            {
+                addDirectNeighbor(neighborId);
+            }
+        }
+
+        for (i = 0; i < routeCount; i++) 
+        {
+            if (routingTable[i].state == DV_ROUTE_VALID &&
+                routingTable[i].cost == 1 &&
+                routingTable[i].destination != TOS_NODE_ID &&
+                !call ND.isNeighbor(routingTable[i].destination)) 
+                {
+                    routingTable[i].cost = DV_INFINITY;
+                    routingTable[i].nextHop = DV_NO_NEXT_HOP;
+                    routingTable[i].state = DV_ROUTE_WITHDRAWN;
+                }
+        }
+    }
 
     command bool DistanceVector.entryAt(
         uint8_t index,
@@ -70,7 +146,7 @@ implementation
         return TRUE;
     }
     
-    command bool DistanceVector.lookupRoute(
+    command bool DistanceVector.lookup(
         uint16_t destination,
         uint16_t* nextHop,
         uint8_t* cost

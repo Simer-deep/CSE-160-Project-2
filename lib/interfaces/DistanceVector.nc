@@ -17,7 +17,7 @@ interface DistanceVector {
         uint8_t cost
     );
 
-    command bool lookupRoute(
+    command bool lookup(
         uint16_t destination,
         uint16_t* nextHop,
         uint8_t* cost
